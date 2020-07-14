@@ -1,3 +1,4 @@
+my_redis_constants.py
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
