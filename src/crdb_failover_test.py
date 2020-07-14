@@ -19,7 +19,14 @@ class MyRedisClient():
 
     def connect_to_redis(self):
         self.r = redis.StrictRedis(self.current_host, self.current_port, charset="utf-8", decode_responses=True, socket_timeout=10.0)
-        print(f'connected to Redis at host {self.current_host}:{self.current_port}')
+        print(f'Connected to Redis at host {self.current_host}:{self.current_port}')
+
+    def switch_connection(self):
+        # grab the connection info for the other cluster
+        self.current_host = REDIS_HOST2 if (self.current_host == REDIS_HOST1) else REDIS_HOST1
+        self.current_port = REDIS_PORT2 if (self.current_port == REDIS_PORT1) else REDIS_PORT1
+        # reestablish connection to new cluster 
+        self.connect_to_redis()
 
     def incr_counter(self):
         while True:
@@ -27,15 +34,12 @@ class MyRedisClient():
                 # call Redis INCR command
                 res = self.r.incr('mycounter')
                 # print result and sleep 1 second
-                print(f'incremented counter on {self.current_host} to {res}')
+                print(f'Incremented counter on {self.current_host} to {res}')
 
             except redis.exceptions.ConnectionError:
+                # in the case of a connection error, switch connection to the other cluster to continue writing
                 print('Connection Error detected. Switching to other cluster.')
-                # grab the connection info for the other cluster
-                self.current_host = REDIS_HOST2 if (self.current_host == REDIS_HOST1) else REDIS_HOST1
-                self.current_port = REDIS_PORT2 if (self.current_port == REDIS_PORT1) else REDIS_PORT1
-                # reestablish connection to new cluster 
-                self.connect_to_redis()
+                self.switch_connection()
 
             except redis.exceptions.TimeoutError: 
                 # in the case of a timeout error, wait 1 extra second and try the command again
@@ -49,7 +53,7 @@ def main():
     my_redis_client = MyRedisClient()
     my_redis_client.incr_counter()
 
-    print('exiting...')
+    print('Exiting...')
         
 if __name__ == "__main__":
     main()
